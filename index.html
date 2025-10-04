@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ردیاب پیشرفت رسانه | Media Progress Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Tahoma', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary-light': '#10B981',
+                        'primary-dark': '#047857',
+                        'dark-bg': '#1e293b',
+                        'dark-card': '#334155',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', Tahoma, sans-serif; background-color: #f8fafc; }
+        .tab-content { transition: opacity 0.3s ease; }
+        
+        .dark {
+            background-color: #1e293b;
+            color: #f1f5f9;
+        }
+        .dark .bg-white { background-color: #334155 !important; color: #f1f5f9; }
+        .dark .bg-gray-50 { background-color: #475569 !important; }
+        .dark .bg-gray-200 { background-color: #64748b !important; color: #e2e8f0; }
+        .dark .border-b, .dark .divide-y { border-color: #475569 !important; }
+        .dark .text-gray-800 { color: #f1f5f9 !important; }
+        .dark .text-gray-500 { color: #cbd5e1 !important; }
+        .dark .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45); }
+        .dark input[readonly] { background-color: #475569 !important; border-color: #64748b; color: #f1f5f9; }
+        .dark input:not([readonly]) { background-color: #334155; border-color: #64748b; color: #f1f5f9; }
+
+
+        .toggle-switch { 
+            width: 3.5rem; 
+            height: 1.8rem; 
+            border-radius: 9999px; 
+            transition: all 0.3s; 
+            cursor: pointer;
+            padding: 2px;
+            display: flex;
+            align-items: center;
+        }
+        .toggle-dot { 
+            width: 1.4rem;
+            height: 1.4rem;
+            border-radius: 50%; 
+            transition: transform 0.3s; 
+        }
+        .toggle-switch.on { background-color: #10B981; }
+        .toggle-switch:not(.on) { background-color: #94a3b8; }
+        
+        .rtl .toggle-switch.on { justify-content: flex-start; }
+        .rtl .toggle-switch:not(.on) { justify-content: flex-end; }
+        .ltr .toggle-switch.on { justify-content: flex-end; }
+        .ltr .toggle-switch:not(.on) { justify-content: flex-start; }
+
+
+        .ltr .toggle-switch:not(.on) .toggle-dot {
+             transform: translateX(0);
+        }
+        .rtl .toggle-switch:not(.on) .toggle-dot {
+            transform: translateX(0); 
+        }
+    </style>
+</head>
+<body class="p-6 transition-colors">
+
+    <script type="text/javascript" src="/eel.js"></script>
+
+    <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-xl p-6 transition-colors">
+        <header class="text-center mb-6 border-b pb-4 border-gray-200 dark:border-slate-600">
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100 flex items-center justify-center">
+                <i class="fas fa-tv text-primary-light dark:text-primary-light ml-2"></i>
+                <span data-lang="app_title">ردیاب پیشرفت رسانه</span>
+            </h1>
+            <p class="text-sm text-gray-500 dark:text-slate-400 mt-1" data-lang="app_subtitle">
+                ردیابی خودکار و دستی پیشرفت فیلم و سریال شما
+            </p>
+        </header>
+        
+        <div class="flex border-b border-gray-200 dark:border-slate-600 mb-6">
+            <button id="tab-tracker" onclick="changeTab('tracker')" class="px-4 py-2 text-lg font-medium border-b-2 border-transparent text-gray-600 hover:text-indigo-600 focus:outline-none transition-all">
+                <span data-lang="tab_tracker">ردیاب</span>
+            </button>
+            <button id="tab-settings" onclick="changeTab('settings')" class="px-4 py-2 text-lg font-medium border-b-2 border-transparent text-gray-600 hover:text-indigo-600 focus:outline-none transition-all">
+                <span data-lang="tab_settings">تنظیمات</span>
+            </button>
+        </div>
+
+        <div id="content-tracker" class="tab-content">
+            
+            <div id="stats-summary" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 text-center">
+            </div>
+
+            <div class="flex justify-between items-center mb-6">
+                <button onclick="eel.on_hotkey_press()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform duration-200 transform hover:scale-[1.02] flex items-center">
+                    <i class="fas fa-plus-circle ml-2"></i>
+                    <span data-lang="btn_manual_track">ثبت دستی پیشرفت (F10)</span>
+                </button>
+                <button onclick="refreshAllData()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-slate-500 dark:text-slate-200 font-bold py-2 px-4 rounded-lg flex items-center transition-colors">
+                    <i class="fas fa-sync-alt ml-2"></i>
+                    <span data-lang="btn_refresh">تازه‌سازی</span>
+                </button>
+            </div>
+
+            <div class="overflow-x-auto rounded-lg shadow-md">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-600">
+                    <thead class="bg-gray-50 dark:bg-slate-600">
+                        <tr>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-300 uppercase tracking-wider" data-lang="tbl_hdr_title">عنوان</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-300 uppercase tracking-wider" data-lang="tbl_hdr_episode">اپیزود</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-300 uppercase tracking-wider" data-lang="tbl_hdr_time">زمان تماشا</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-300 uppercase tracking-wider" data-lang="tbl_hdr_actions">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="media-list" class="bg-white dark:bg-dark-card divide-y divide-gray-200 dark:divide-slate-600">
+                        <tr><td colspan="4" class="text-center py-4 text-gray-500 dark:text-slate-400" data-lang="loading">در حال بارگذاری...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="content-settings" class="tab-content hidden">
+            <h2 class="text-2xl font-semibold text-gray-700 dark:text-slate-200 mb-4" data-lang="settings_controls_title">کنترل‌های برنامه</h2>
+            <div class="space-y-4 border p-4 rounded-lg bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600">
+                
+                <div class="flex items-center justify-between p-3 bg-white dark:bg-dark-card rounded-lg shadow-sm">
+                    <div class="flex items-center">
+                        <i class="fas fa-power-off text-2xl text-red-500 ml-3"></i>
+                        <div class="flex-1">
+                            <p class="font-bold text-gray-700 dark:text-slate-200" data-lang="set_master_title">سوئیچ اصلی برنامه</p>
+                            <p class="text-sm text-gray-500 dark:text-slate-400" data-lang="set_master_desc">کل ردیابی (شامل هات‌کی و خودکار) را متوقف می‌کند.</p>
+                        </div>
+                    </div>
+                    <div id="program-status-toggle" onclick="toggleProgramActive()" class="toggle-switch">
+                        <div class="toggle-dot bg-white shadow-md"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between p-3 bg-white dark:bg-dark-card rounded-lg shadow-sm">
+                    <div class="flex items-center">
+                        <i class="fas fa-eye text-2xl text-blue-500 ml-3"></i>
+                        <div class="flex-1">
+                            <p class="font-bold text-gray-700 dark:text-slate-200" data-lang="set_auto_title">ردیابی خودکار</p>
+                            <p class="text-sm text-gray-500 dark:text-slate-400" data-lang="set_auto_desc">هر ۱۰ ثانیه عنوان پنجره فعال را بررسی و زمان را ثبت می‌کند.</p>
+                        </div>
+                    </div>
+                    <div id="auto-tracking-toggle" onclick="toggleAutoTracking()" class="toggle-switch">
+                        <div class="toggle-dot bg-white shadow-md"></div>
+                    </div>
+                </div>
+                <p id="program-warning" class="text-sm text-center font-medium text-red-600 dark:text-red-400 mt-2 hidden">
+                    ⚠ <span data-lang="set_auto_warning">ردیابی خودکار به دلیل خاموش بودن سوئیچ اصلی، غیرفعال است.</span>
+                </p>
+
+                <div class="flex items-center justify-between p-3 bg-white dark:bg-dark-card rounded-lg shadow-sm">
+                    <div class="flex items-center">
+                        <i class="fas fa-language text-2xl text-yellow-500 ml-3"></i>
+                        <div class="flex-1">
+                            <p class="font-bold text-gray-700 dark:text-slate-200" data-lang="set_lang_title">زبان برنامه</p>
+                            <p class="text-sm text-gray-500 dark:text-slate-400" data-lang="set_lang_desc">تغییر زبان رابط کاربری بین فارسی و انگلیسی.</p>
+                        </div>
+                    </div>
+                    <button id="language-switch-btn" onclick="toggleLanguage()" class="bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition-colors">
+                        English
+                    </button>
+                </div>
+                
+                <div class="flex items-center justify-between p-3 bg-white dark:bg-dark-card rounded-lg shadow-sm">
+                    <div class="flex items-center">
+                        <i class="fas fa-moon text-2xl text-purple-500 ml-3"></i>
+                        <div class="flex-1">
+                            <p class="font-bold text-gray-700 dark:text-slate-200" data-lang="set_dark_title">حالت تاریک (Dark Mode)</p>
+                            <p class="text-sm text-gray-500 dark:text-slate-400" data-lang="set_dark_desc">فعال یا غیرفعال کردن حالت نمایش تاریک.</p>
+                        </div>
+                    </div>
+                    <div id="dark-mode-toggle" onclick="toggleDarkMode()" class="toggle-switch">
+                        <div class="toggle-dot bg-white shadow-md"></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <h2 class="text-2xl font-semibold text-gray-700 dark:text-slate-200 mt-8 mb-4" data-lang="settings_blacklist_title">مدیریت لیست سیاه (Blacklist)</h2>
+            <p class="text-sm text-gray-500 dark:text-slate-400 mb-4" data-lang="settings_blacklist_desc">عناوین یا کلمات کلیدی پنجره‌هایی که نباید ردیابی شوند (مانند برنامه‌های کاری یا مرورگر بدون رسانه) را اضافه کنید.</p>
+
+            <div class="flex mb-4">
+                <input type="text" id="blacklist-input" data-lang-placeholder="blacklist_placeholder" placeholder="مثلاً: Slack, Outlook, Visual Studio Code" class="flex-grow p-2 border border-gray-300 dark:border-slate-600 dark:bg-dark-card rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
+                <button onclick="addBlacklistKeywordHandler()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg mr-2 transition-colors">
+                    <i class="fas fa-plus-square"></i> <span data-lang="btn_add">افزودن</span>
+                </button>
+            </div>
+
+            <div id="blacklist-keywords" class="flex flex-wrap gap-2 p-3 bg-white dark:bg-dark-card border border-gray-200 dark:border-slate-600 rounded-lg min-h-16">
+                <p class="text-sm text-gray-400 dark:text-slate-500" data-lang="blacklist_loading">در حال بارگذاری کلمات...</p>
+            </div>
+
+        </div>
+
+        <div id="notification-area" class="fixed bottom-4 right-4 space-y-2">
+        </div>
+    </div>
+    
+    <div id="progress-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 dark:bg-opacity-90 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white dark:bg-dark-card rounded-xl shadow-2xl p-6 w-full max-w-md transition-colors" dir="rtl">
+            <h3 class="text-2xl font-bold mb-4 text-gray-800 dark:text-slate-100 border-b pb-2 border-gray-200 dark:border-slate-600">
+                <span data-lang="modal_title_header">ثبت دستی پیشرفت</span> <i class="fas fa-keyboard text-indigo-500 mr-1"></i>
+            </h3>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-slate-300" data-lang="modal_title_label">عنوان رسانه تشخیص داده شده:</label>
+                <input type="text" id="modal-title" class="mt-1 block w-full p-2 border border-gray-300 rounded-lg bg-gray-100 dark:bg-slate-600 dark:border-slate-500 font-semibold" readonly>
+            </div>
+            
+            <div class="mb-4">
+                <label for="modal-episode" class="block text-sm font-medium text-gray-700 dark:text-slate-300" data-lang="modal_episode_label">اپیزود/فصل:</label>
+                <input type="text" id="modal-episode" class="mt-1 block w-full p-2 border border-gray-300 dark:border-slate-600 dark:bg-dark-card rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                <p id="modal-auto-episode" class="text-xs text-green-600 mt-1"></p>
+            </div>
+            
+            <div class="mb-6">
+                <label for="modal-stop-time" class="block text-sm font-medium text-gray-700 dark:text-slate-300" data-lang="modal_stoptime_label">زمان توقف (مانند 1:24:30):</label>
+                <input type="text" id="modal-stop-time" data-lang-placeholder="modal_stoptime_placeholder" placeholder="خالی بگذارید اگر به پایان رسید" class="mt-1 block w-full p-2 border border-gray-300 dark:border-slate-600 dark:bg-dark-card rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                <p id="modal-last-updated" class="text-xs text-gray-500 dark:text-slate-400 mt-1"></p>
+            </div>
+
+            <div class="flex justify-end space-x-3 space-x-reverse">
+                <button onclick="closeModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 dark:bg-slate-500 dark:hover:bg-slate-600 dark:text-slate-200 font-bold py-2 px-4 rounded-lg transition-colors">
+                    <span data-lang="btn_close">بستن</span>
+                </button>
+                <button onclick="saveManualProgressHandler()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                    <span data-lang="btn_save_progress">ذخیره پیشرفت</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const languageMap = {
+            'fa': {
+                'app_title': 'ردیاب پیشرفت رسانه',
+                'app_subtitle': 'ردیابی خودکار و دستی پیشرفت فیلم و سریال شما',
+                'tab_tracker': 'ردیاب',
+                'tab_settings': 'تنظیمات',
+                'loading': 'در حال بارگذاری...',
+                'btn_manual_track': 'ثبت دستی پیشرفت (F10)',
+                'btn_refresh': 'تازه‌سازی',
+                'btn_add': 'افزودن',
+                'btn_close': 'بستن',
+                'btn_save_progress': 'ذخیره پیشرفت',
+                'tbl_hdr_title': 'عنوان',
+                'tbl_hdr_episode': 'اپیزود',
+                'tbl_hdr_time': 'زمان تماشا',
+                'tbl_hdr_actions': 'عملیات',
+                'time_hours_minutes': (h, m) => `${h} ساعت و ${m} دقیقه`,
+                'status_finished': 'پایان یافته',
+                'status_watching': 'در حال تماشا',
+                'status_not_set': 'نا مشخص',
+                'last_updated': 'آخرین بروزرسانی',
+                'stop_time_prefix': '(توقف در: ',
+                'stop_time_suffix': ')',
+                'stat_total': 'همه موارد',
+                'stat_watching': 'در حال تماشا',
+                'stat_finished': 'پایان یافته',
+                'stat_total_time': 'کل زمان ردیابی شده',
+                'settings_controls_title': 'کنترل‌های برنامه',
+                'set_master_title': 'سوئیچ اصلی برنامه',
+                'set_master_desc': 'کل ردیابی (شامل هات‌کی و خودکار) را متوقف می‌کند.',
+                'set_auto_title': 'ردیابی خودکار',
+                'set_auto_desc': 'هر ۱۰ ثانیه عنوان پنجره فعال را بررسی و زمان را ثبت می‌کند.',
+                'set_auto_warning': 'ردیابی خودکار به دلیل خاموش بودن سوئیچ اصلی، غیرفعال است.',
+                'set_lang_title': 'زبان برنامه',
+                'set_lang_desc': 'تغییر زبان رابط کاربری بین فارسی و انگلیسی.',
+                'set_dark_title': 'حالت تاریک (Dark Mode)',
+                'set_dark_desc': 'فعال یا غیرفعال کردن حالت نمایش تاریک.',
+                'settings_blacklist_title': 'مدیریت لیست سیاه (Blacklist)',
+                'settings_blacklist_desc': 'عناوین یا کلمات کلیدی پنجره‌هایی که نباید ردیابی شوند (مانند برنامه‌های کاری یا مرورگر بدون رسانه) را اضافه کنید.',
+                'blacklist_placeholder': 'مثلاً: Slack, Outlook, Visual Studio Code',
+                'blacklist_loading': 'در حال بارگذاری کلمات...',
+                'modal_title_header': 'ثبت دستی پیشرفت',
+                'modal_title_label': 'عنوان رسانه تشخیص داده شده:',
+                'modal_episode_label': 'اپیزود/فصل:',
+                'modal_stoptime_label': 'زمان توقف (مانند 1:24:30):',
+                'modal_stoptime_placeholder': 'خالی بگذارید اگر به پایان رسید',
+                'modal_last_updated_prefix': 'آخرین به‌روزرسانی: ',
+                'modal_episode_suggested_prefix': 'اپیزود پیشنهادی: ',
+                'notif_app_on': 'برنامه فعال شد',
+                'notif_app_on_desc': 'ردیابی و هات‌کی‌ها اکنون فعال هستند.',
+                'notif_app_off': 'برنامه غیرفعال شد',
+                'notif_app_off_desc': 'تمامی ردیابی‌ها و هات‌کی‌ها متوقف شدند.',
+                'notif_auto_on': 'فعال شد',
+                'notif_auto_off': 'غیرفعال شد',
+                'notif_auto_status': 'ردیابی خودکار',
+                'notif_error': 'خطا',
+                'notif_error_must_activate_master': 'لطفاً ابتدا سوئیچ اصلی برنامه را فعال کنید.',
+                'notif_processing': 'درحال پردازش',
+                'notif_request_finished': (title) => `درخواست پایان یافتن '${title}' ارسال شد...`,
+                'notif_finished': '✅ پایان!',
+                'notif_finished_success': (title) => `'${title}' با موفقیت پایان یافته ثبت شد.`,
+                'notif_error_finish_fail': 'خطا در ثبت پایان یافته. (آیتم پیدا نشد یا تابع سمت پایتون نامشخص است)',
+                'notif_request_delete': (title) => `درخواست حذف '${title}' ارسال شد...`,
+                'notif_deleted': '🗑️ حذف شد',
+                'notif_deleted_success': (title) => `'${title}' با موفقیت حذف شد.`,
+                'notif_error_delete_fail': 'خطا در حذف آیتم. (آیتم پیدا نشد یا تابع سمت پایتون نامشخص است)',
+                'notif_error_title_empty': 'عنوان رسانه نمی‌تواند خالی باشد.',
+                'notif_saved': '💾 ذخیره شد',
+                'notif_saved_success': (title) => `پیشرفت '${title}' با موفقیت ثبت شد.`,
+                'notif_error_save_fail': 'ذخیره دستی پیشرفت با شکست مواجه شد.',
+                'notif_added': '➕ اضافه شد',
+                'notif_added_success': (keyword) => `'${keyword}' به لیست سیاه اضافه شد.`,
+                'notif_duplicate': '⚠️ تکراری',
+                'notif_duplicate_desc': (keyword) => `'${keyword}' قبلاً در لیست موجود است.`,
+                'notif_removed': '➖ حذف شد',
+                'notif_removed_success': (keyword) => `'${keyword}' از لیست سیاه حذف شد.`,
+            },
+            'en': {
+                'app_title': 'Media Progress Tracker',
+                'app_subtitle': 'Automatic and manual tracking for your movies and series.',
+                'tab_tracker': 'Tracker',
+                'tab_settings': 'Settings',
+                'loading': 'Loading...',
+                'btn_manual_track': 'Manual Progress (F10)',
+                'btn_refresh': 'Refresh',
+                'btn_add': 'Add',
+                'btn_close': 'Close',
+                'btn_save_progress': 'Save Progress',
+                'tbl_hdr_title': 'Title',
+                'tbl_hdr_episode': 'Episode',
+                'tbl_hdr_time': 'Watch Time',
+                'tbl_hdr_actions': 'Actions',
+                'time_hours_minutes': (h, m) => `${h}h and ${m}m`,
+                'status_finished': 'Finished',
+                'status_watching': 'Watching',
+                'status_not_set': 'Not Set',
+                'last_updated': 'Last Updated',
+                'stop_time_prefix': '(Stopped at: ',
+                'stop_time_suffix': ')',
+                'stat_total': 'Total Items',
+                'stat_watching': 'Watching',
+                'stat_finished': 'Finished',
+                'stat_total_time': 'Total Time Tracked',
+                'settings_controls_title': 'Program Controls',
+                'set_master_title': 'Master Program Switch',
+                'set_master_desc': 'Stops all tracking (including hotkey and auto).',
+                'set_auto_title': 'Auto Tracking',
+                'set_auto_desc': 'Checks active window title every 10 seconds and logs time.',
+                'set_auto_warning': 'Auto tracking is disabled because the master switch is OFF.',
+                'set_lang_title': 'App Language',
+                'set_lang_desc': 'Change the UI language between Persian and English.',
+                'set_dark_title': 'Dark Mode',
+                'set_dark_desc': 'Enable or disable the dark display theme.',
+                'settings_blacklist_title': 'Blacklist Management',
+                'settings_blacklist_desc': 'Add window titles or keywords that should not be tracked (e.g., work apps or non-media browsers).',
+                'blacklist_placeholder': 'e.g.: Slack, Outlook, Visual Studio Code',
+                'blacklist_loading': 'Loading keywords...',
+                'modal_title_header': 'Manual Progress Entry',
+                'modal_title_label': 'Detected Media Title:',
+                'modal_episode_label': 'Episode/Season:',
+                'modal_stoptime_label': 'Stop Time (e.g., 1:24:30):',
+                'modal_stoptime_placeholder': 'Leave empty if finished',
+                'modal_last_updated_prefix': 'Last Updated: ',
+                'modal_episode_suggested_prefix': 'Suggested Episode: ',
+                'notif_app_on': 'Program Activated',
+                'notif_app_on_desc': 'Tracking and hotkeys are now active.',
+                'notif_app_off': 'Program Deactivated',
+                'notif_app_off_desc': 'All tracking is halted.',
+                'notif_auto_on': 'Activated',
+                'notif_auto_off': 'Deactivated',
+                'notif_auto_status': 'Auto Tracking',
+                'notif_error': 'Error',
+                'notif_error_must_activate_master': 'Please activate the Master Program Switch first.',
+                'notif_processing': 'Processing',
+                'notif_request_finished': (title) => `Request to finish '${title}' sent...`,
+                'notif_finished': '✅ Finished!',
+                'notif_finished_success': (title) => `'${title}' successfully marked as finished.`,
+                'notif_error_finish_fail': 'Error marking as finished. (Item not found or Python function error)',
+                'notif_request_delete': (title) => `Request to delete '${title}' sent...`,
+                'notif_deleted': '🗑️ Deleted',
+                'notif_deleted_success': (title) => `'${title}' successfully deleted.`,
+                'notif_error_delete_fail': 'Error deleting item. (Item not found or Python function error)',
+                'notif_error_title_empty': 'Media title cannot be empty.',
+                'notif_saved': '💾 Saved',
+                'notif_saved_success': (title) => `Progress for '${title}' successfully logged.`,
+                'notif_error_save_fail': 'Manual progress save failed.',
+                'notif_added': '➕ Added',
+                'notif_added_success': (keyword) => `'${keyword}' added to blacklist.`,
+                'notif_duplicate': '⚠️ Duplicate',
+                'notif_duplicate_desc': (keyword) => `'${keyword}' is already in the list.`,
+                'notif_removed': '➖ Removed',
+                'notif_removed_success': (keyword) => `'${keyword}' removed from blacklist.`,
+            }
+        };
+
+        let currentLanguage = localStorage.getItem('appLanguage') || 'fa';
+        let isDarkMode = localStorage.getItem('isDarkMode') === 'true';
+        let currentActiveTab = 'tracker';
+        let isProgramActive = true;
+        
+        function initSettings() {
+            if (isDarkMode) {
+                document.documentElement.classList.add('dark');
+            }
+            setLanguage(currentLanguage, false);
+            
+            document.getElementById('dark-mode-toggle').classList.toggle('on', isDarkMode);
+        }
+
+        function getTranslation(key, ...args) {
+            const translation = languageMap[currentLanguage][key] || languageMap['fa'][key] || key;
+            if (typeof translation === 'function') {
+                return translation(...args);
+            }
+            return translation;
+        }
+
+        function setLanguage(lang, refreshData = true) {
+            currentLanguage = lang;
+            localStorage.setItem('appLanguage', lang);
+            const isRTL = lang === 'fa';
+            
+            document.documentElement.lang = lang;
+            document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+            document.body.classList.toggle('rtl', isRTL);
+            document.body.classList.toggle('ltr', !isRTL);
+            document.getElementById('progress-modal').setAttribute('dir', isRTL ? 'rtl' : 'ltr');
+
+            document.querySelectorAll('[data-lang]').forEach(element => {
+                const key = element.getAttribute('data-lang');
+                element.textContent = getTranslation(key);
+            });
+            
+            document.querySelectorAll('[data-lang-placeholder]').forEach(element => {
+                const key = element.getAttribute('data-lang-placeholder');
+                element.setAttribute('placeholder', getTranslation(key));
+            });
+
+            const langBtn = document.getElementById('language-switch-btn');
+            langBtn.textContent = isRTL ? 'English' : 'فارسی';
+            langBtn.classList.toggle('ml-2', isRTL);
+            langBtn.classList.toggle('mr-2', !isRTL);
+            
+            if (refreshData) {
+                refreshAllData();
+            }
+        }
+        
+        function toggleLanguage() {
+            const newLang = currentLanguage === 'fa' ? 'en' : 'fa';
+            setLanguage(newLang);
+        }
+        
+        function toggleDarkMode() {
+            isDarkMode = !isDarkMode;
+            localStorage.setItem('isDarkMode', isDarkMode);
+            document.documentElement.classList.toggle('dark', isDarkMode);
+            document.getElementById('dark-mode-toggle').classList.toggle('on', isDarkMode);
+            
+            const title = isDarkMode ? getTranslation('notif_app_off') : getTranslation('notif_app_on');
+            const message = isDarkMode ? getTranslation('set_dark_title') + ' ' + getTranslation('notif_auto_on') : getTranslation('set_dark_title') + ' ' + getTranslation('notif_auto_off');
+            showNotification(title, message, 3000, 'bg-purple-600');
+        }
+
+        function changeTab(tabName) {
+            document.getElementById(`content-${currentActiveTab}`).classList.add('hidden');
+            document.getElementById(`tab-${currentActiveTab}`).classList.remove('border-indigo-600', 'text-indigo-600');
+            document.getElementById(`tab-${currentActiveTab}`).classList.add('border-transparent');
+            
+            currentActiveTab = tabName;
+            
+            document.getElementById(`content-${currentActiveTab}`).classList.remove('hidden');
+            document.getElementById(`tab-${currentActiveTab}`).classList.add('border-indigo-600', 'text-indigo-600');
+            document.getElementById(`tab-${currentActiveTab}`).classList.remove('border-transparent');
+
+            if (tabName === 'settings') {
+                loadBlacklist();
+            }
+        }
+
+        
+        // --- GUI <-> Python Communication ---
+        window.onload = function() {
+            initSettings();
+            changeTab('tracker'); 
+            refreshAllData();
+            eel.get_program_status()(handleProgramStatus);
+        }
+
+        function refreshAllData() {
+            eel.get_progress_data()(updateList);
+            eel.get_stats_summary()(updateStats);
+            eel.get_program_status()(handleProgramStatus);
+        }
+
+        function updateList(data) {
+            const listElement = document.getElementById('media-list');
+            listElement.innerHTML = '';
+
+            if (!data || data.length === 0) {
+                listElement.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500 dark:text-slate-400 text-lg font-medium">${getTranslation('media_list_empty_message') || 'لیست تماشای شما خالی است.'}</td></tr>`;
+                return;
+            }
+
+            const sortedData = data.sort((a, b) => a.is_finished - b.is_finished || b.last_updated.localeCompare(a.last_updated));
+
+            sortedData.forEach(item => {
+                const isFinished = item.is_finished;
+                
+                let statusIcon, statusColor, statusText;
+                if (isFinished) {
+                    statusIcon = '✅';
+                    statusColor = 'text-green-600';
+                    statusText = getTranslation('status_finished');
+                } else {
+                    statusIcon = '👁️';
+                    statusColor = 'text-blue-600';
+                    statusText = getTranslation('status_watching');
+                }
+                
+                const timeMinutes = item.total_minutes_watched || 0;
+                const hours = Math.floor(timeMinutes / 60);
+                const minutes = timeMinutes % 60;
+                const timeStr = getTranslation('time_hours_minutes', hours, minutes);
+                
+                const episodeText = item.episode || (isFinished ? '' : getTranslation('status_not_set'));
+                const stopTimeText = item.stop_time ? `${getTranslation('stop_time_prefix')}${item.stop_time}${getTranslation('stop_time_suffix')}` : '';
+
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors';
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="text-sm font-semibold text-gray-900 dark:text-slate-100">${item.title}</div>
+                        <div class="text-xs ${statusColor}">${statusIcon} ${statusText} | ${getTranslation('last_updated')}: ${item.last_updated.split(' ')[0]}</div>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-slate-300">
+                        ${episodeText}
+                        <p class="text-xs text-red-500 dark:text-red-400">${stopTimeText}</p>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-slate-300 font-mono">${timeStr}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium flex justify-end">
+                        <button onclick="editItem('${item.title}')" class="text-blue-600 hover:text-blue-900 mr-3 p-1 rounded-full hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors" title="${getTranslation('modal_edit_title') || 'ویرایش'}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="markFinished('${item.title}')" class="text-green-600 hover:text-green-900 mr-3 p-1 rounded-full hover:bg-green-100 dark:hover:bg-slate-700 transition-colors" title="${getTranslation('status_finished')}">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button onclick="deleteItem('${item.title}')" class="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-100 dark:hover:bg-slate-700 transition-colors" title="${getTranslation('notif_deleted')}">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                listElement.appendChild(row);
+            });
+        }
+
+        function updateStats(stats) {
+            const summaryElement = document.getElementById('stats-summary');
+            summaryElement.innerHTML = `
+                ${createStatCard('fas fa-list-alt', getTranslation('stat_total'), stats.total_items, 'bg-blue-100 text-blue-600')}
+                ${createStatCard('fas fa-hourglass-half', getTranslation('stat_watching'), stats.in_progress_items, 'bg-orange-100 text-orange-600')}
+                ${createStatCard('fas fa-check-circle', getTranslation('stat_finished'), stats.finished_items, 'bg-green-100 text-green-600')}
+                ${createStatCard('fas fa-clock', getTranslation('stat_total_time'), stats.total_time_tracked, 'bg-indigo-100 text-indigo-600', true)}
+            `;
+        }
+
+        function createStatCard(icon, title, value, colorClasses, isTime = false) {
+            return `
+                <div class="bg-white dark:bg-dark-card p-4 rounded-lg shadow-md flex items-center transition-colors">
+                    <div class="p-3 rounded-full ${colorClasses} ml-3">
+                        <i class="${icon} text-xl"></i>
+                    </div>
+                    <div class="${currentLanguage === 'en' ? 'text-left' : 'text-right'} flex-1">
+                        <p class="text-sm font-medium text-gray-500 dark:text-slate-400">${title}</p>
+                        <p class="text-xl font-bold text-gray-800 dark:text-slate-100 ${isTime ? 'font-mono' : ''}">${value}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function handleProgramStatus(status) {
+            isProgramActive = status.is_program_active;
+            update_program_status(status.is_program_active);
+            update_tracking_status(status.is_auto_tracking_active);
+        }
+
+        function update_program_status(isActive) {
+            const toggle = document.getElementById('program-status-toggle');
+            toggle.classList.toggle('on', isActive);
+            toggle.classList.toggle('bg-gray-300', !isActive);
+            document.getElementById('program-warning').classList.toggle('hidden', isActive);
+            
+            const autoToggle = document.getElementById('auto-tracking-toggle');
+            autoToggle.style.pointerEvents = isActive ? 'auto' : 'none';
+            autoToggle.style.opacity = isActive ? '1' : '0.5';
+        }
+        
+        function update_tracking_status(isActive) {
+            const toggle = document.getElementById('auto-tracking-toggle');
+            toggle.classList.toggle('on', isActive);
+            toggle.classList.toggle('bg-gray-300', !isActive);
+        }
+        
+        async function toggleProgramActive() {
+            const newState = await eel.toggle_program_active()();
+            update_program_status(newState);
+            const titleKey = newState ? 'notif_app_on' : 'notif_app_off';
+            const descKey = newState ? 'notif_app_on_desc' : 'notif_app_off_desc';
+            showNotification(getTranslation(titleKey), getTranslation(descKey), 3000, newState ? 'bg-primary-light' : 'bg-red-500');
+        }
+        
+        async function toggleAutoTracking() {
+            if (!isProgramActive) {
+                showNotification(getTranslation('notif_error'), getTranslation('notif_error_must_activate_master'), 3000, 'bg-yellow-500');
+                return;
+            }
+            const newState = await eel.toggle_auto_tracking()();
+            update_tracking_status(newState);
+            const msgKey = newState ? 'notif_auto_on' : 'notif_auto_off';
+            showNotification(getTranslation('notif_auto_status'), getTranslation(msgKey), 3000, newState ? 'bg-blue-600' : 'bg-gray-500');
+        }
+        
+        async function editItem(title) {
+            showNotification(getTranslation('notif_processing'), getTranslation('notif_request_edit', title), 1500, 'bg-gray-500');
+            
+            const itemDetails = await eel.get_item_details_by_title(title)();
+            
+            if (itemDetails) {
+                // For editing, we reuse the existing modal but pre-fill it with existing data
+                openModal({
+                    detectedTitle: itemDetails.title,
+                    detectedEpisode: itemDetails.episode,
+                    lastTime: itemDetails.stop_time || '',
+                    lastUpdated: itemDetails.last_updated
+                });
+                
+                // We add the original title to the modal's dataset for identification during save
+                document.getElementById('progress-modal-content').dataset.originalTitle = itemDetails.title;
+
+                // Also, we disable the title field for editing to prevent accidental renaming (optional)
+                document.getElementById('modal-title').disabled = true;
+
+            } else {
+                showNotification(getTranslation('notif_error'), getTranslation('notif_error_item_not_found'), 3000, 'bg-red-500');
+            }
+        }
+        
+        async function markFinished(title) {
+            showNotification(getTranslation('notif_processing'), getTranslation('notif_request_finished', title), 1500, 'bg-gray-500');
+            
+            const success = await eel.mark_item_as_finished_by_title(title)();
+            if (success) {
+                showNotification(getTranslation('notif_finished'), getTranslation('notif_finished_success', title), 3000, 'bg-green-600');
+                refreshAllData();
+            } else {
+                showNotification(getTranslation('notif_error'), getTranslation('notif_error_finish_fail'), 3000, 'bg-red-500');
+            }
+        }
+
+        async function deleteItem(title) {
+            showNotification(getTranslation('notif_processing'), getTranslation('notif_request_delete', title), 1500, 'bg-gray-500');
+            
+            const success = await eel.delete_item_by_title(title)();
+            if (success) {
+                showNotification(getTranslation('notif_deleted'), getTranslation('notif_deleted_success', title), 3000, 'bg-red-600');
+                refreshAllData();
+            } else {
+                showNotification(getTranslation('notif_error'), getTranslation('notif_error_delete_fail'), 3000, 'bg-red-500');
+            }
+        }
+        
+        function openModal(modalData) {
+            // Reset title field enablement when opening
+            document.getElementById('modal-title').disabled = false; 
+            document.getElementById('progress-modal-content').dataset.originalTitle = '';
+
+            document.getElementById('modal-title').value = modalData.detectedTitle || getTranslation('status_not_set');
+            document.getElementById('modal-episode').value = modalData.detectedEpisode || '';
+            document.getElementById('modal-stop-time').value = modalData.lastTime || '';
+            
+            const lastUpdatedPrefix = getTranslation('modal_last_updated_prefix');
+            document.getElementById('modal-last-updated').textContent = `${lastUpdatedPrefix}${modalData.lastUpdated || 'N/A'}`;
+            
+            const autoEpisodeElem = document.getElementById('modal-auto-episode');
+            if (modalData.detectedEpisode) {
+                const suggestedPrefix = getTranslation('modal_episode_suggested_prefix');
+                autoEpisodeElem.textContent = `${suggestedPrefix}${modalData.detectedEpisode}`;
+            } else {
+                autoEpisodeElem.textContent = '';
+            }
+            
+            document.getElementById('progress-modal').classList.remove('hidden');
+            document.getElementById('progress-modal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('progress-modal').classList.add('hidden');
+            document.getElementById('progress-modal').classList.remove('flex');
+            // Cleanup: ensure title is enabled for the next open
+            document.getElementById('modal-title').disabled = false;
+        }
+
+        async function saveManualProgressHandler() {
+            const originalTitle = document.getElementById('progress-modal-content').dataset.originalTitle;
+            const newTitle = document.getElementById('modal-title').value.trim();
+            const episode = document.getElementById('modal-episode').value.trim();
+            const stopTime = document.getElementById('modal-stop-time').value.trim();
+            
+            // Check which title to use (original title is used if we are in edit mode)
+            const titleToSave = originalTitle || newTitle;
+
+            if (!titleToSave || titleToSave === getTranslation('status_not_set')) {
+                showNotification(getTranslation('notif_error'), getTranslation('notif_error_title_empty'), 3000, 'bg-red-500');
+                return;
+            }
+
+            // We use the same save function in Python for both edit and new entry
+            const success = await eel.save_manual_progress(titleToSave, episode, stopTime)();
+            if (success) {
+                closeModal();
+                showNotification(getTranslation('notif_saved'), getTranslation('notif_saved_success', titleToSave), 3000, 'bg-green-600');
+                refreshAllData();
+            } else {
+                showNotification(getTranslation('notif_error'), getTranslation('notif_error_save_fail'), 3000, 'bg-red-500');
+            }
+        }
+        
+        function loadBlacklist() {
+            eel.get_blacklist_keywords()(update_blacklist_display);
+        }
+        
+        eel.expose(update_blacklist_display);
+        function update_blacklist_display(keywords) {
+            const container = document.getElementById('blacklist-keywords');
+            container.innerHTML = '';
+            
+            if (keywords.length === 0) {
+                container.innerHTML = `<p class="text-sm text-gray-400 dark:text-slate-500">${getTranslation('blacklist_empty_message') || 'لیست سیاه خالی است.'}</p>`;
+                return;
+            }
+
+            keywords.forEach(keyword => {
+                const chip = document.createElement('div');
+                chip.className = 'flex items-center bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-slate-200 text-sm font-medium px-3 py-1 rounded-full transition-colors';
+                chip.innerHTML = `
+                    <span>${keyword}</span>
+                    <button onclick="removeBlacklistKeywordHandler('${keyword}')" class="${currentLanguage === 'fa' ? 'ml-2' : 'mr-2'} text-red-500 hover:text-red-700 transition-colors">
+                        <i class="fas fa-times-circle"></i>
+                    </button>
+                `;
+                container.appendChild(chip);
+            });
+        }
+        
+        async function addBlacklistKeywordHandler() {
+            const input = document.getElementById('blacklist-input');
+            const keyword = input.value.trim();
+            
+            if (keyword) {
+                const success = await eel.add_blacklist_keyword(keyword)();
+                if (success) {
+                    showNotification(getTranslation('notif_added'), getTranslation('notif_added_success', keyword), 3000, 'bg-green-600');
+                    input.value = '';
+                } else {
+                    showNotification(getTranslation('notif_duplicate'), getTranslation('notif_duplicate_desc', keyword), 3000, 'bg-yellow-500');
+                }
+            }
+        }
+        
+        async function removeBlacklistKeywordHandler(keyword) {
+            const success = await eel.remove_blacklist_keyword(keyword)();
+            if (success) {
+                showNotification(getTranslation('notif_removed'), getTranslation('notif_removed_success', keyword), 3000, 'bg-red-600');
+            }
+        }
+        
+        eel.expose(showNotification);
+        function showNotification(title, message, duration = 4000, bgColor = 'bg-indigo-600') {
+            const area = document.getElementById('notification-area');
+            const notification = document.createElement('div');
+            
+            const directionClass = currentLanguage === 'fa' ? 'rtl' : 'ltr';
+
+            notification.className = `p-4 rounded-lg shadow-xl text-white ${bgColor} w-72 transition-all transform opacity-0 translate-y-4 ${directionClass}`;
+            notification.innerHTML = `
+                <p class="font-bold">${title}</p>
+                <p class="text-sm">${message}</p>
+            `;
+            
+            if (currentLanguage === 'fa') {
+                 area.style.left = 'auto';
+                 area.style.right = '1rem';
+            } else {
+                 area.style.right = 'auto';
+                 area.style.left = '1rem';
+            }
+
+            area.appendChild(notification);
+
+            setTimeout(() => {
+                notification.classList.remove('opacity-0', 'translate-y-4');
+                notification.classList.add('opacity-100', 'translate-y-0');
+            }, 10);
+
+            setTimeout(() => {
+                notification.classList.remove('opacity-100', 'translate-y-0');
+                notification.classList.add('opacity-0', 'translate-y-4');
+                
+                setTimeout(() => notification.remove(), 500); 
+            }, duration);
+        }
+        
+        eel.expose(updateList);
+        eel.expose(updateStats);
+        eel.expose(update_program_status);
+        eel.expose(update_tracking_status);
+        eel.expose(openModal);
+    </script>
+</body>
+</html>
